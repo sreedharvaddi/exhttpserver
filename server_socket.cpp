@@ -4,15 +4,18 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <thread>
+#include <unistd.h>
 #define PORT 8080
-main() {
-    int server_fd, new_socket, valread;
+using namespace std;
+int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
     char buffer[1024] = {0};
     char *hello = "Hello from server";
-      
+void process();     
+main() {
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
@@ -38,20 +41,29 @@ main() {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    if (listen(server_fd, 3) < 0)
-    {
-        perror("listen");
-        exit(EXIT_FAILURE);
+    while(1) {
+        if (listen(server_fd, 3) < 0)
+        {
+            perror("listen");
+            exit(EXIT_FAILURE);
+        }
+        thread t(process);
+        t.join();
     }
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
-                       (socklen_t*)&addrlen))<0)
-    {
-        perror("accept");
-        exit(EXIT_FAILURE);
-    }
-    valread = read( new_socket , buffer, 1024);
-    printf("%s\n",buffer );
-    send(new_socket , hello , strlen(hello) , 0 );
-    printf("Hello message sent\n");
     return 0;
+}
+
+void process() {
+     if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
+                       (socklen_t*)&addrlen))<0)
+        {
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
+        valread = read( new_socket , buffer, 1024);
+        printf("%s\n",buffer );
+        send(new_socket , hello , strlen(hello) , 0 );
+        close(new_socket);
+        printf("Hello message sent\n");
+ 
 }
